@@ -1,0 +1,42 @@
+# Hook Profile 설정
+# 프로젝트 상황에 맞게 프로파일을 선택하여 적용
+
+profiles:
+  lite:
+    description: "단순 변경, 핫픽스용 (최소 게이트)"
+    hooks:
+      - policy-gate
+      - quality-gate
+
+  standard:
+    description: "일반 개발 (기본값)"
+    hooks:
+      - policy-gate
+      - risk-gate
+      - contract-gate
+      - quality-gate
+      - security-scan
+      - task-sync
+
+  full:
+    description: "대규모 기능, 배포 전 (전체 게이트)"
+    hooks:
+      - policy-gate
+      - risk-gate
+      - contract-gate
+      - quality-gate
+      - security-scan
+      - task-sync
+      - docs-gate
+      - architecture-updater
+      - changelog-recorder
+      - cross-domain-notifier
+      - design-validator
+      - interface-validator
+      - permission-checker
+      - pre-edit-impact-check
+      - risk-area-warning
+      - standards-validator
+
+# 현재 활성 프로파일
+active: standard
