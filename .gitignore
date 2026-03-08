@@ -1,0 +1,47 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Claude Code
+.claude/memory/
+.claude/reverse/scan-cache.json
+.claude/reverse/extract-log.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Docker
+workspace/
+
+# OMC State
+.omc/state/
+.omc/logs/
+
+# Maestro runtime
+.maestro-mode
+artifacts/runs/
+

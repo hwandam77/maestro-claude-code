@@ -1,0 +1,78 @@
+# Maestro Claude Code - Multi-AI Routing Configuration
+# claude-imple-skills multi-ai-run에서 사용하는 라우팅 설정
+version: "1.0"
+
+cli_models:
+  claude:
+    command: "claude"
+    model: "sonnet"
+    emoji: "🧠"
+
+  codex:
+    command: "codex exec"
+    model: "gpt-5.3-codex"
+    args: "--sandbox workspace-write"
+    emoji: "🤖"
+
+  gemini:
+    command: "gemini"
+    model: "gemini-3.1-pro-preview"
+    args: "--output-format text"
+    emoji: "💎"
+
+  qwen35:
+    command: "./scripts/qwen35-cli.sh"
+    model: "Qwen3.5-122B"
+    emoji: "🔮"
+
+  qwen-coder:
+    command: "./scripts/qwen-coder-cli.sh"
+    model: "Qwen3-Coder-30B"
+    emoji: "⚡"
+
+  claude-glm:
+    command: "./scripts/maestro.sh"
+    model: "GLM-5"
+    emoji: "🌐"
+
+role_routing:
+  # 전략/설계 -> Claude (Anthropic 구독)
+  orchestrator: claude
+  project-manager: claude
+  chief-architect: claude
+
+  # 코드 구현 -> Codex (gpt-5.3-codex)
+  backend-specialist: codex
+  test-specialist: codex
+  api-designer: codex
+  security-specialist: codex
+
+  # 디자인/UI -> Gemini
+  frontend-specialist: gemini
+  chief-designer: gemini
+
+  # 고급 추론 -> Qwen3.5-122B (nexus, 400K context)
+  # task_type_routing에서 명시적 지정 시 사용
+
+  # 코드 생성 경량 -> Qwen3-Coder-30B (cognit, 16K context)
+  # task_type_routing에서 명시적 지정 시 사용
+
+task_type_routing:
+  code_generation: codex
+  code_review: codex
+  refactoring: codex
+  testing: codex
+  ui_implementation: gemini
+  design_review: gemini
+  styling: gemini
+  architecture: claude
+  planning: claude
+  coordination: claude
+  long_context_analysis: qwen35
+  quick_code_gen: qwen-coder
+
+defaults:
+  model: claude
+  fallback_enabled: true
+  timeout: 120
+  retry_count: 2
