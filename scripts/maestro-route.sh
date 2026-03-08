@@ -23,7 +23,14 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# 심볼릭 링크를 따라 실제 스크립트 경로 해석
+_REAL_SCRIPT="$0"
+if [ -L "$_REAL_SCRIPT" ]; then
+    _REAL_SCRIPT="$(readlink "$_REAL_SCRIPT")"
+    # 상대 경로인 경우 원본 위치 기준으로 절대 경로 변환
+    [[ "$_REAL_SCRIPT" != /* ]] && _REAL_SCRIPT="$(cd "$(dirname "$0")" && pwd)/$_REAL_SCRIPT"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$_REAL_SCRIPT")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # .env 로드
@@ -122,7 +129,7 @@ case "$TYPE" in
         ;;
     design|gemini)
         echo "[maestro-route] 💎 gemini (gemini-3.1-pro-preview) 로 라우팅" >&2
-        echo "$TASK" | gemini --output-format text
+        gemini -p "$TASK" --output-format text --yolo
         ;;
     analyze|qwen35|large)
         echo "[maestro-route] 🔮 Qwen3.5-122B (nexus, 400K) 로 라우팅" >&2
