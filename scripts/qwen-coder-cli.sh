@@ -21,7 +21,7 @@ if [ -f "${PROJECT_DIR}/.env" ]; then
     set -a; source "${PROJECT_DIR}/.env"; set +a
 fi
 
-COGNIT_HOST="${COGNIT_HOST:-100.89.224.48}"
+COGNIT_HOST="${COGNIT_HOST:-10.10.0.6}"
 COGNIT_PORT="${COGNIT_PORT:-8000}"
 COGNIT_URL="http://${COGNIT_HOST}:${COGNIT_PORT}/v1/chat/completions"
 TIMEOUT="${QWEN_CODER_TIMEOUT:-120}"
@@ -71,7 +71,7 @@ fi
 RESPONSE=$(curl -sf --max-time "$TIMEOUT" "$COGNIT_URL" \
     -H "Content-Type: application/json" \
     -d "$(jq -n --argjson msgs "$MESSAGES" \
-        '{model:"Qwen3-Coder-30B-A3B-Instruct",messages:$msgs,temperature:0.3,max_tokens:4096}')" \
+        '{model:"qwen3-coder",messages:$msgs,temperature:0.3,max_tokens:4096}')" \
     2>/dev/null)
 
 if [ $? -ne 0 ] || [ -z "$RESPONSE" ]; then
