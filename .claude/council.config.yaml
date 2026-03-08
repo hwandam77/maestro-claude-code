@@ -1,0 +1,33 @@
+# Maestro Claude Code - Multi-AI Review Council Configuration
+# Claude (Chairman) + Gemini + Codex + Qwen3.5-122B (nexus)
+#
+# 사용: /multi-ai-review 에서 자동 로드
+
+council:
+    members:
+        - name: gemini
+          command: "gemini -p 2>/dev/null"
+          emoji: "💎"
+          color: "GREEN"
+
+        - name: codex
+          command: "codex exec"
+          emoji: "🤖"
+          color: "BLUE"
+
+        - name: qwen3.5-122b
+          command: "./scripts/qwen35-cli.sh"
+          emoji: "🔮"
+          color: "YELLOW"
+
+    chairman:
+        role: "auto"
+        description: >
+            모든 의견을 종합하여 최종 추천을 제시합니다.
+            코더 전문가(Codex)의 구현 관점과
+            Qwen3.5-122B의 장문 분석 능력을 균형있게 반영합니다.
+
+    settings:
+        timeout: 300
+        exclude_chairman_from_members: true
+        fallback_on_timeout: true
