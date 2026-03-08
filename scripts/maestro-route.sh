@@ -9,12 +9,17 @@
 #   ./scripts/maestro-route.sh "자유 태스크"  # auto-detect
 #
 # 타입:
-#   code       → codex (gpt-5.3-codex)
+#   code       → codex -q (gpt-5.3-codex), 실패 시 qwen-coder fallback
 #   design     → gemini (gemini-3.1-pro-preview)
 #   analyze    → qwen35 (nexus, 400K context)
 #   localcode  → qwen-coder (cognit, 20K context)
 #   arch       → claude (Anthropic 구독)
 #   (없으면)   → auto-detect 키워드 분석
+#
+# codex 요구사항:
+#   - 공식 OpenAI API 키 (sk-proj-... 또는 sk-...) 필요
+#   - OpenRouter 키 (sk-or-v1-...) 는 /v1/responses 미지원으로 불가
+#   - OPENAI_API_KEY 환경변수 또는 ~/.config/codex/ 설정
 
 set -euo pipefail
 
@@ -25,6 +30,34 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 if [ -f "${PROJECT_DIR}/.env" ]; then
     set -a; source "${PROJECT_DIR}/.env"; set +a
 fi
+
+# codex 사용 가능 여부 확인 (공식 OpenAI 키만 지원)
+codex_available() {
+    if ! command -v codex &>/dev/null; then
+        echo "[maestro-route] ⚠️  codex CLI 미설치" >&2
+        return 1
+    fi
+    local key="${OPENAI_API_KEY:-}"
+    if [[ "$key" == sk-or-v1-* ]]; then
+        echo "[maestro-route] ⚠️  OpenRouter 키는 codex 미지원 (sk-or-v1-...)" >&2
+        echo "[maestro-route]    공식 OpenAI 키(sk-proj-...) 필요 → qwen-coder fallback" >&2
+        return 1
+    fi
+    return 0
+}
+
+# codex 실행 (claude-imple-skills 패턴: codex -q "...")
+run_codex() {
+    local task="$1"
+    codex -q "$task"
+}
+
+# qwen-coder fallback 실행
+run_qwen_coder() {
+    local task="$1"
+    echo "[maestro-route] ⚡ qwen-coder fallback (cognit, 20K)" >&2
+    "${SCRIPT_DIR}/qwen-coder-cli.sh" "$task"
+}
 
 # 인자 파싱
 TYPE=""
@@ -72,8 +105,12 @@ fi
 # 라우팅 실행
 case "$TYPE" in
     code|codex)
-        echo "[maestro-route] 🤖 codex (gpt-5.3-codex) 로 라우팅" >&2
-        codex exec "$TASK"
+        if codex_available; then
+            echo "[maestro-route] 🤖 codex (gpt-5.3-codex) 로 라우팅" >&2
+            run_codex "$TASK"
+        else
+            run_qwen_coder "$TASK"
+        fi
         ;;
     design|gemini)
         echo "[maestro-route] 💎 gemini (gemini-3.1-pro-preview) 로 라우팅" >&2
