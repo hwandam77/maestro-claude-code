@@ -9,7 +9,7 @@
 #   ./scripts/qwen-coder-cli.sh "코드 생성 요청"
 #   ./scripts/qwen-coder-cli.sh -s "시스템 프롬프트" "코드 생성 요청"
 #
-# 제약: context 16K tokens, 동시 요청 1개 권장
+# 제약: context 20K tokens, 동시 요청 1개 권장
 
 set -euo pipefail
 

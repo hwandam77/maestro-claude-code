@@ -41,7 +41,7 @@ multi-ai-run이 역할별 CLI에 태스크를 위임:
 - codex exec: 코드 생성/리뷰 (gpt-5.3-codex)
 - gemini: UI/디자인 (gemini-3.1-pro)
 - qwen35-cli.sh: 고급 추론 (nexus, 400K context)
-- qwen-coder-cli.sh: 경량 코드 생성 (cognit, 16K context)
+- qwen-coder-cli.sh: 경량 코드 생성 (cognit, 20K context)
 
 ### Compactor → Wave 중간 검증
 

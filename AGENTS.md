@@ -21,7 +21,7 @@ Claude Code 구독을 중심으로, claude-imple-skills의 multi-ai-run이 태�
 | 3 | gpt-5.3-codex | OpenAI | `codex exec` | 코드 생성, 리뷰, 테스트 | - |
 | 4 | gemini-3.1-pro-preview | Google | `gemini` | 디자인, UI, 멀티모달 | - |
 | 5 | Qwen3.5-122B (Q3_K_XL) | nexus (자체) | `./scripts/qwen35-cli.sh` | 고급 추론, 장문 컨텍스트 | 400K |
-| 6 | Qwen3-Coder-30B-A3B (AWQ-4bit) | cognit (자체) | `./scripts/qwen-coder-cli.sh` | 코드 생성, 리팩토링 | 16K |
+| 6 | Qwen3-Coder-30B-A3B (AWQ-4bit) | cognit (자체) | `./scripts/qwen-coder-cli.sh` | 코드 생성, 리팩토링 | 20K |
 
 ## 명령어
 
@@ -153,7 +153,7 @@ OMC 에이전트와 claude-imple-skills의 project-team은 **별개 시스템**�
 
 ## 제약 사항
 
-### Qwen3-Coder 16K 토큰 제한
+### Qwen3-Coder 20K 토큰 제한
 - 동시 요청 1개 권장 (GPU당 11.4GB/12GB)
 - 긴 파일 처리 불가 -> Claude 또는 Codex로 에스컬레이션
 

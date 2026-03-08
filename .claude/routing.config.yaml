@@ -54,7 +54,7 @@ role_routing:
   # 고급 추론 -> Qwen3.5-122B (nexus, 400K context)
   # task_type_routing에서 명시적 지정 시 사용
 
-  # 코드 생성 경량 -> Qwen3-Coder-30B (cognit, 16K context)
+  # 코드 생성 경량 -> Qwen3-Coder-30B (cognit, 20K context)
   # task_type_routing에서 명시적 지정 시 사용
 
 task_type_routing:

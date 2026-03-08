@@ -91,7 +91,7 @@ Claude Code (구독, 오케스트레이터)
 | 3 | **gpt-5.3-codex** | OpenAI | `codex exec` | 코드 생성, 리뷰, 디버깅 | - |
 | 4 | **gemini-3.1-pro** | Google | `gemini` | 디자인, UI, 멀티모달 분석 | - |
 | 5 | **Qwen3.5-122B** | nexus (자체) | `qwen35-cli.sh` | 고급 추론, 장문 분석 | 400K |
-| 6 | **Qwen3-Coder-30B** | cognit (자체) | `qwen-coder-cli.sh` | 코드 생성, 보일러플레이트 | 16K |
+| 6 | **Qwen3-Coder-30B** | cognit (자체) | `qwen-coder-cli.sh` | 코드 생성, 보일러플레이트 | 20K |
 
 ### 비용 구조
 
@@ -473,7 +473,7 @@ ssh cognit "nvidia-smi"
 ```
 모델: Qwen3-Coder-30B-A3B-Instruct AWQ-4bit
 VRAM: GPU당 11.4GB / 12GB (RTX 3080 Ti × 2)
-Context: 16K tokens
+Context: 20K tokens
 서비스: vllm-qwen3-coder.service (systemd, 자동시작 enabled)
 추가: ollama (port 11434, qwen3.5:27b 등 보유)
 

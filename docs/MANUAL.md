@@ -218,7 +218,7 @@ cat src/complex-module.ts | ./scripts/qwen35-cli.sh -s \
     "위 TypeScript 코드의 버그와 개선점을 알려줘"
 ```
 
-**Qwen3-Coder-30B (cognit) — 코드 생성, 16K context**
+**Qwen3-Coder-30B (cognit) — 코드 생성, 20K context**
 
 ```bash
 # 코드 생성 요청
@@ -236,7 +236,7 @@ echo "이 함수를 리팩토링해줘" | ./scripts/qwen-coder-cli.sh
 
 - 두 스크립트 모두 서버 접근 불가 시 에러 메시지와 함께 `exit 1`로 종료합니다.
 - `.env` 파일에서 설정을 자동 로드합니다.
-- cognit (Qwen-Coder)는 **context 16K tokens 제한**이 있습니다. 대용량 파일은 nexus를 사용하세요.
+- cognit (Qwen-Coder)는 **context 20K tokens 제한**이 있습니다. 대용량 파일은 nexus를 사용하세요.
 
 ---
 
@@ -719,7 +719,7 @@ ps aux | grep llama-server
 | 모델 | Qwen3-Coder-30B-A3B-Instruct AWQ-4bit |
 | 서비스 | vLLM (systemd) |
 | GPU | RTX 3080 Ti x2 (GPU당 11.4GB/12GB 사용) |
-| Context | **16K tokens 제한** (VRAM 한계) |
+| Context | **20K tokens** (AWQ-4bit 확인 완료) |
 | Ollama | 포트 11434 (공존, qwen3.5:27b 등) |
 
 ```bash
@@ -1028,7 +1028,7 @@ sleep 60
 
 **예방 조치**
 
-- Qwen-Coder 사용 시 **context 16K tokens 이하** 유지
+- Qwen-Coder 사용 시 **context 20K tokens 이하** 유지
 - 동시 요청 **1개만** 전송
 - 대용량 파일은 nexus(400K context) 사용
 - `Qwen3-Coder-Next-AWQ-8bit` (24B) 모델은 VRAM 부족으로 사용 불가
