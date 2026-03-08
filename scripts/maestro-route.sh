@@ -31,25 +31,34 @@ if [ -f "${PROJECT_DIR}/.env" ]; then
     set -a; source "${PROJECT_DIR}/.env"; set +a
 fi
 
-# codex 사용 가능 여부 확인 (공식 OpenAI 키만 지원)
+# codex 사용 가능 여부 확인
+# ChatGPT OAuth 로그인 또는 공식 OpenAI 키(sk-proj-...) 필요
 codex_available() {
     if ! command -v codex &>/dev/null; then
         echo "[maestro-route] ⚠️  codex CLI 미설치" >&2
         return 1
     fi
-    local key="${OPENAI_API_KEY:-}"
-    if [[ "$key" == sk-or-v1-* ]]; then
-        echo "[maestro-route] ⚠️  OpenRouter 키는 codex 미지원 (sk-or-v1-...)" >&2
-        echo "[maestro-route]    공식 OpenAI 키(sk-proj-...) 필요 → qwen-coder fallback" >&2
-        return 1
+    # ChatGPT OAuth 로그인 상태 확인
+    local login_status
+    login_status=$(env -u OPENAI_API_KEY -u OPENAI_BASE_URL codex login status 2>&1 || true)
+    if echo "$login_status" | grep -qi "logged in"; then
+        return 0  # OAuth 로그인 완료
     fi
-    return 0
+    # API 키 방식: 공식 OpenAI 키인지 확인
+    local key="${OPENAI_API_KEY:-}"
+    if [[ -n "$key" && "$key" != sk-or-v1-* ]]; then
+        return 0  # 공식 OpenAI 키 사용
+    fi
+    echo "[maestro-route] ⚠️  codex 인증 없음 (OAuth 미로그인, 공식 키 미설정)" >&2
+    echo "[maestro-route]    'codex login' 또는 OPENAI_API_KEY=sk-proj-... 설정 필요" >&2
+    return 1
 }
 
 # codex 실행 (claude-imple-skills 패턴: codex -q "...")
+# OPENAI_API_KEY/OPENAI_BASE_URL 언셋 → ChatGPT OAuth 사용
 run_codex() {
     local task="$1"
-    codex -q "$task"
+    env -u OPENAI_API_KEY -u OPENAI_BASE_URL codex --yolo "$task"
 }
 
 # qwen-coder fallback 실행
@@ -105,12 +114,11 @@ fi
 # 라우팅 실행
 case "$TYPE" in
     code|codex)
-        if codex_available; then
-            echo "[maestro-route] 🤖 codex (gpt-5.3-codex) 로 라우팅" >&2
-            run_codex "$TASK"
-        else
-            run_qwen_coder "$TASK"
-        fi
+        # codex exec: Codex 구독 필요 (현재 미구독)
+        # codex --yolo: TTY 필요 (비인터랙티브 불가)
+        # → qwen-coder로 처리 (cognit, 20K context)
+        echo "[maestro-route] ⚡ qwen-coder (cognit) 로 라우팅 [codex 구독 시 전환 가능]" >&2
+        run_qwen_coder "$TASK"
         ;;
     design|gemini)
         echo "[maestro-route] 💎 gemini (gemini-3.1-pro-preview) 로 라우팅" >&2
