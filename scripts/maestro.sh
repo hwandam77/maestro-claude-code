@@ -96,8 +96,11 @@ start_proxy() {
 }
 
 run_with_proxy() {
+    # ANTHROPIC_API_KEY를 프록시 master_key로 오버라이드
+    # (claude CLI는 ANTHROPIC_API_KEY를 사용, ANTHROPIC_AUTH_TOKEN 무시)
+    # ZAI_API_KEY는 프록시가 .env에서 로드하여 백엔드 호출 시 사용
     ANTHROPIC_BASE_URL="http://localhost:${CCPROXY_PORT}" \
-    ANTHROPIC_AUTH_TOKEN="${ZAI_API_KEY}" \
+    ANTHROPIC_API_KEY="sk-maestro" \
     exec claude "$@"
 }
 
