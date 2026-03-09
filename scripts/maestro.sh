@@ -158,16 +158,18 @@ case "${1:-run}" in
     status)
         show_status
         ;;
-    direct)
+    proxy)
+        # 프록시 경유 모드 (Phase 5 CCR 에이전트 라우팅 테스트용)
         shift
-        run_direct "$@"
-        ;;
-    *)
         if start_proxy; then
             run_with_proxy "$@"
         else
             echo "[maestro] 프록시 fallback → ZAI API 직접 연결"
             run_direct "$@"
         fi
+        ;;
+    *)
+        # 기본: ZAI API 직접 연결 (Coding Plan은 CLI 전용)
+        run_direct "$@"
         ;;
 esac

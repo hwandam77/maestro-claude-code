@@ -22,8 +22,8 @@ if [ -f "${PROJECT_DIR}/.env" ]; then
     set -a; source "${PROJECT_DIR}/.env"; set +a
 fi
 
-# LITELLM_MASTER_KEY 기본값 설정
-export LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-maestro-local-key}"
+# LITELLM_MASTER_KEY: 설정 시 DB 인증 강제 → localhost 전용이므로 비활성화
+unset LITELLM_MASTER_KEY
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

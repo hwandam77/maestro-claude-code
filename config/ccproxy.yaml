@@ -31,7 +31,7 @@ model_list:
   # Claude Code가 보내는 claude-sonnet-4-6 요청을 GLM-5로 라우팅
   - model_name: "claude-sonnet-4-6"
     litellm_params:
-      model: "openai/claude-sonnet-4-6"
+      model: "anthropic/claude-sonnet-4-6"
       api_base: "https://api.z.ai/api/anthropic"
       api_key: "os.environ/ZAI_API_KEY"
     model_info:
@@ -132,7 +132,7 @@ litellm_settings:
   drop_params: true
 
 general_settings:
-  master_key: "sk-maestro"           # 로컬 고정 키 (인증용)
+  # 인증 비활성화 — localhost 전용 프록시
+  no_auth: true
   database_url: null
   store_model_in_db: false
-  allow_requests_on_db_fail: true    # DB 없어도 요청 허용
