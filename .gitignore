@@ -45,3 +45,4 @@ workspace/
 .maestro-mode
 artifacts/runs/
 
+demos/casts/*.cast

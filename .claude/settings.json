@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/contract-gate.js",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/security-scan.js",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/task-sync.js",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
