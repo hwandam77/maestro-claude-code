@@ -106,6 +106,9 @@ run_with_proxy() {
 
 run_direct() {
     echo "[maestro] GLM-5 (ZAI) 직접 모드"
+    # ANTHROPIC_API_KEY를 제거해야 ZAI가 x-api-key 헤더로 인증 실패하지 않음
+    # ZAI Coding Plan은 ANTHROPIC_AUTH_TOKEN (Authorization: Bearer) 전용
+    unset ANTHROPIC_API_KEY
     ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
     ANTHROPIC_AUTH_TOKEN="${ZAI_API_KEY}" \
     exec claude "$@"
