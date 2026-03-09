@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maestro Observability Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0f172a; color: #e2e8f0; }
+    .card { background: #1e293b; border: 1px solid #334155; }
+    .model-glm { color: #4CAF50; }
+    .model-qwen-coder { color: #2196F3; }
+    .model-qwen { color: #9C27B0; }
+    .model-gemini { color: #FF9800; }
+    .model-codex { color: #F44336; }
+    .model-claude { color: #FFD700; }
+    .model-unknown { color: #94a3b8; }
+    .status-ok { color: #4ade80; }
+    .status-error { color: #f87171; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.875rem; }
+    th { color: #94a3b8; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    tr:hover td { background: #273349; }
+    .bar-bg { background: #334155; border-radius: 4px; height: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  </style>
+</head>
+<body class="min-h-screen font-mono">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- 헤더 -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Maestro Observability</h1>
+        <p class="text-slate-400 text-sm mt-1">멀티 LLM 오케스트레이션 실시간 모니터링</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="status-dot" class="w-3 h-3 rounded-full bg-slate-500 pulse"></span>
+        <span id="status-text" class="text-sm text-slate-400">연결 중...</span>
+        <span id="last-update" class="text-xs text-slate-500"></span>
+      </div>
+    </div>
+
+    <!-- 요약 카드 -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="card rounded-lg p-4">
+        <p class="text-slate-400 text-xs uppercase tracking-wide mb-1">24h 총 이벤트</p>
+        <p id="total-events" class="text-3xl font-bold text-white">-</p>
+      </div>
+      <div class="card rounded-lg p-4">
+        <p class="text-slate-400 text-xs uppercase tracking-wide mb-1">활성 모델</p>
+        <p id="active-models" class="text-3xl font-bold text-white">-</p>
+      </div>
+      <div class="card rounded-lg p-4">
+        <p class="text-slate-400 text-xs uppercase tracking-wide mb-1">이벤트 타입</p>
+        <p id="event-types" class="text-3xl font-bold text-white">-</p>
+      </div>
+      <div class="card rounded-lg p-4">
+        <p class="text-slate-400 text-xs uppercase tracking-wide mb-1">갱신 주기</p>
+        <p class="text-3xl font-bold text-emerald-400">5s</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <!-- 모델별 통계 -->
+      <div class="card rounded-lg p-4">
+        <h2 class="text-white font-semibold mb-4">모델별 호출 통계 (24h)</h2>
+        <div id="model-stats">
+          <p class="text-slate-500 text-sm">데이터 로딩 중...</p>
+        </div>
+      </div>
+
+      <!-- 이벤트 타입별 분포 -->
+      <div class="card rounded-lg p-4">
+        <h2 class="text-white font-semibold mb-4">이벤트 타입 분포 (24h)</h2>
+        <div id="event-type-stats">
+          <p class="text-slate-500 text-sm">데이터 로딩 중...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 최근 이벤트 -->
+    <div class="card rounded-lg p-4">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-white font-semibold">최근 이벤트</h2>
+        <span class="text-slate-400 text-xs">최신 50개</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>시각</th>
+              <th>이벤트 타입</th>
+              <th>툴</th>
+              <th>모델</th>
+              <th>상태</th>
+              <th>세션</th>
+            </tr>
+          </thead>
+          <tbody id="events-table">
+            <tr><td colspan="7" class="text-slate-500 text-center py-4">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const MODEL_COLORS = {
+      'glm': '#4CAF50',
+      'qwen3-coder': '#2196F3',
+      'qwen': '#9C27B0',
+      'gemini': '#FF9800',
+      'codex': '#F44336',
+      'claude': '#FFD700',
+    };
+
+    function getModelColor(model) {
+      if (!model) return '#94a3b8';
+      const m = model.toLowerCase();
+      if (m.includes('glm')) return MODEL_COLORS.glm;
+      if (m.includes('qwen3-coder') || m.includes('qwen3_coder')) return MODEL_COLORS['qwen3-coder'];
+      if (m.includes('qwen')) return MODEL_COLORS.qwen;
+      if (m.includes('gemini')) return MODEL_COLORS.gemini;
+      if (m.includes('codex') || m.includes('gpt')) return MODEL_COLORS.codex;
+      if (m.includes('claude')) return MODEL_COLORS.claude;
+      return '#94a3b8';
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      return d.toLocaleString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    }
+
+    function formatModel(model) {
+      if (!model || model.trim() === '') return '<span style="color:#94a3b8">-</span>';
+      const color = getModelColor(model);
+      return `<span style="color:${color};font-weight:600">${model}</span>`;
+    }
+
+    function formatStatus(status) {
+      if (!status || status === 'ok') return '<span class="badge" style="background:#14532d;color:#4ade80">ok</span>';
+      return `<span class="badge" style="background:#450a0a;color:#f87171">${status}</span>`;
+    }
+
+    function truncate(s, n=20) {
+      if (!s) return '-';
+      return s.length > n ? s.slice(0, n) + '…' : s;
+    }
+
+    async function fetchStats() {
+      const res = await fetch(`${API_BASE}/api/stats`);
+      return res.json();
+    }
+
+    async function fetchEvents() {
+      const res = await fetch(`${API_BASE}/api/events?limit=50`);
+      return res.json();
+    }
+
+    function renderModelStats(models) {
+      if (!models || models.length === 0) {
+        document.getElementById('model-stats').innerHTML = '<p class="text-slate-500 text-sm">이벤트 없음</p>';
+        return;
+      }
+      const maxCount = Math.max(...models.map(m => m.call_count));
+      const html = models.map(m => {
+        const color = getModelColor(m.model || '');
+        const pct = maxCount > 0 ? Math.round((m.call_count / maxCount) * 100) : 0;
+        const modelLabel = m.model || '(없음)';
+        return `
+          <div class="mb-4">
+            <div class="flex justify-between items-center mb-1">
+              <span style="color:${color};font-weight:600">${modelLabel}</span>
+              <span class="text-white font-bold">${m.call_count}회</span>
+            </div>
+            <div class="bar-bg">
+              <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500 mt-1">
+              <span>성공: ${m.success_count ?? 0} / 실패: ${m.error_count ?? 0}</span>
+              <span>평균 응답: ${m.avg_latency_ms ? Math.round(m.avg_latency_ms) + 'ms' : '-'}</span>
+            </div>
+          </div>`;
+      }).join('');
+      document.getElementById('model-stats').innerHTML = html;
+    }
+
+    function renderEventTypes(types) {
+      if (!types || types.length === 0) {
+        document.getElementById('event-type-stats').innerHTML = '<p class="text-slate-500 text-sm">이벤트 없음</p>';
+        return;
+      }
+      const maxCount = Math.max(...types.map(t => t.count));
+      const typeColors = {
+        'PreToolUse': '#38bdf8',
+        'PostToolUse': '#818cf8',
+        'Stop': '#fb7185',
+        'SubagentStart': '#34d399',
+        'SubagentStop': '#fbbf24',
+        'Unknown': '#94a3b8',
+      };
+      const html = types.map(t => {
+        const color = typeColors[t.event_type] ?? '#94a3b8';
+        const pct = maxCount > 0 ? Math.round((t.count / maxCount) * 100) : 0;
+        return `
+          <div class="mb-3">
+            <div class="flex justify-between items-center mb-1">
+              <span style="color:${color};font-weight:600">${t.event_type}</span>
+              <span class="text-white font-bold">${t.count}회</span>
+            </div>
+            <div class="bar-bg">
+              <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+            </div>
+          </div>`;
+      }).join('');
+      document.getElementById('event-type-stats').innerHTML = html;
+    }
+
+    function renderEvents(events) {
+      if (!events || events.length === 0) {
+        document.getElementById('events-table').innerHTML =
+          '<tr><td colspan="7" class="text-slate-500 text-center py-4">이벤트 없음</td></tr>';
+        return;
+      }
+      const html = events.map(e => `
+        <tr>
+          <td class="text-slate-400">#${e.id}</td>
+          <td class="text-slate-300">${formatTime(e.created_at)}</td>
+          <td><span class="text-sky-400">${e.event_type ?? '-'}</span></td>
+          <td class="text-slate-300">${truncate(e.tool_name, 20)}</td>
+          <td>${formatModel(e.model)}</td>
+          <td>${formatStatus(e.status)}</td>
+          <td class="text-slate-500">${truncate(e.session_id, 12)}</td>
+        </tr>`).join('');
+      document.getElementById('events-table').innerHTML = html;
+    }
+
+    function setConnected(ok) {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (ok) {
+        dot.className = 'w-3 h-3 rounded-full bg-emerald-400';
+        text.textContent = '연결됨';
+        text.className = 'text-sm text-emerald-400';
+      } else {
+        dot.className = 'w-3 h-3 rounded-full bg-red-500 pulse';
+        text.textContent = '서버 미응답';
+        text.className = 'text-sm text-red-400';
+      }
+    }
+
+    async function refresh() {
+      try {
+        const [statsData, eventsData] = await Promise.all([fetchStats(), fetchEvents()]);
+
+        document.getElementById('total-events').textContent = statsData.total_24h ?? 0;
+        document.getElementById('active-models').textContent = (statsData.by_model ?? []).length;
+        document.getElementById('event-types').textContent = (statsData.by_event_type ?? []).length;
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString('ko-KR');
+
+        renderModelStats(statsData.by_model ?? []);
+        renderEventTypes(statsData.by_event_type ?? []);
+        renderEvents(eventsData.events ?? []);
+        setConnected(true);
+      } catch (e) {
+        setConnected(false);
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

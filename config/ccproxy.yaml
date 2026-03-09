@@ -1,0 +1,138 @@
+# Maestro Claude Code - LiteLLM Proxy 설정
+# 계획서: GitHub-프로젝트-적용-계획서.md Phase 1
+#
+# 사용법:
+#   litellm --config config/ccproxy.yaml --port 4000
+#
+# 핵심 원칙:
+#   GLM-5 기본 → 조건부 에스컬레이션 (Codex/Gemini/Qwen)
+#   모든 규칙 미매칭 → GLM-5 (기본값)
+
+# ============================================================
+# 모델 목록
+# ============================================================
+model_list:
+
+  # ─── 기본: GLM-5 ($3/월) ───
+  # ZAI Coding Plan은 Claude CLI 전용: maestro.sh(claude-glm)으로만 사용 가능
+  # LiteLLM Proxy 직접 API 호출 불가 (인증 실패 확인)
+  # 프록시에서 glm-5 모델명으로 요청 시 → qwen3.5-122b로 fallback됨
+  - model_name: "glm-5"
+    litellm_params:
+      model: "anthropic/claude-sonnet-4-6"
+      api_base: "https://api.z.ai/api/anthropic"
+      api_key: "os.environ/ZAI_API_KEY"
+    model_info:
+      description: "기본 오케스트레이터. 대부분의 요청 처리."
+      cost_per_month: "$3 고정"
+
+  # ─── 기본 alias: claude-sonnet-4-6 → glm-5 ───
+  # maestro.sh에서 ANTHROPIC_BASE_URL을 프록시로 변경하면
+  # Claude Code가 보내는 claude-sonnet-4-6 요청을 GLM-5로 라우팅
+  - model_name: "claude-sonnet-4-6"
+    litellm_params:
+      model: "openai/claude-sonnet-4-6"
+      api_base: "https://api.z.ai/api/anthropic"
+      api_key: "os.environ/ZAI_API_KEY"
+    model_info:
+      description: "claude-sonnet-4-6 요청을 GLM-5로 투명 라우팅"
+
+  # ─── 기본 alias: claude-haiku-4-5 → Qwen3-Coder (무료) ───
+  # OMC haiku 티어 요청을 Qwen3-Coder로 라우팅
+  # Tailscale 미연결 시 litellm-fallback.yaml에서 glm-5로 대체
+  - model_name: "claude-haiku-4-5-20251001"
+    litellm_params:
+      model: "openai/Qwen3-Coder-30B-A3B-Instruct"
+      api_base: "http://100.121.138.74:8000/v1"
+      api_key: "not-needed"
+    model_info:
+      description: "haiku 티어 → Qwen3-Coder (경량, 무료)"
+      max_tokens: 20000
+      requires_tailscale: true
+
+  # ─── 무료 보조: Qwen3-Coder-30B (cognit) ───
+  - model_name: "qwen3-coder-30b"
+    litellm_params:
+      model: "openai/qwen3-coder"
+      api_base: "http://100.121.138.74:8000/v1"
+      api_key: "not-needed"
+    model_info:
+      description: "경량 코드 생성. haiku 티어 대체."
+      max_tokens: 20000
+      requires_tailscale: true
+
+  # ─── 무료 보조: Qwen3.5-122B (nexus) ───
+  - model_name: "qwen3.5-122b"
+    litellm_params:
+      model: "openai/Qwen3.5-122B-Q3_K_XL"
+      api_base: "http://100.124.117.46:8080/v1"
+      api_key: "not-needed"
+    model_info:
+      description: "장문 분석. 400K context window."
+      max_tokens: 400000
+      requires_tailscale: true
+
+  # ─── 에스컬레이션: Gemini 3.1 Pro ───
+  - model_name: "gemini-3.1-pro"
+    litellm_params:
+      model: "gemini/gemini-2.0-flash"
+      api_key: "os.environ/GOOGLE_API_KEY"
+    model_info:
+      description: "디자인, UI/UX, 멀티모달 분석."
+
+  # ─── 에스컬레이션: gpt-5.4-medium (Codex 구독) ───
+  - model_name: "gpt-5.4-medium"
+    litellm_params:
+      model: "openai/gpt-4o"
+      api_key: "os.environ/OPENAI_API_KEY"
+    model_info:
+      description: "고품질 코드 생성/리뷰. 구독 내 무제한."
+
+  # ─── 최종 에스컬레이션: Claude 구독 ───
+  - model_name: "claude-opus"
+    litellm_params:
+      model: "claude-opus-4-6"
+      api_key: "os.environ/ANTHROPIC_API_KEY"
+    model_info:
+      description: "보안 감사, 아키텍처 설계, 최종 에스컬레이션."
+
+# ============================================================
+# 라우터 설정
+# ============================================================
+router_settings:
+  # Tailscale 연결 불가 시 fallback 체인
+  # haiku → Qwen3-Coder 실패 시 → glm-5
+  fallbacks:
+    - "claude-haiku-4-5-20251001":
+        - "glm-5"
+    - "qwen3-coder-30b":
+        - "glm-5"
+    - "qwen3.5-122b":
+        - "glm-5"
+  # 컨텍스트 윈도우 초과 시 장문 모델로 fallback
+  context_window_fallbacks:
+    - "glm-5":
+        - "qwen3.5-122b"
+        - "claude-sonnet-4-6"
+
+# ============================================================
+# 서버 설정
+# ============================================================
+litellm_settings:
+  # Phase 5: 에이전트별 동적 모델 오버라이드 (CCR 패턴)
+  # subagent-router.py가 힌트 파일 기록 → AgentRouter가 읽어 모델 변경
+  # 주의: ccproxy-start.sh가 PYTHONPATH=${PROJECT_DIR}로 litellm 시작해야 import 가능
+  # callbacks: ["litellm_callback.AgentRouter"]  # DB 없이는 동작 불가, 추후 활성화
+  # 요청/응답 로깅
+  success_callback: []
+  failure_callback: []
+  # 타임아웃 설정 (자체 서버 느릴 수 있음)
+  request_timeout: 120
+  # 스트리밍 지원
+  drop_params: true
+
+general_settings:
+  master_key: "sk-maestro"           # 로컬 고정 키 (인증용)
+  database_url: null
+  store_model_in_db: false
+  allow_requests_on_db_fail: true    # DB 없어도 요청 허용

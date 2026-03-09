@@ -8,6 +8,21 @@
             "type": "command",
             "command": "node /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/contract-gate.js",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/send-event.py PreToolUse",
+            "timeout": 3
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/send-event.py PreToolUse",
+            "timeout": 3
           }
         ]
       }
@@ -20,6 +35,11 @@
             "type": "command",
             "command": "node /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/security-scan.js",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/send-event.py PostToolUse",
+            "timeout": 3
           }
         ]
       }
@@ -32,6 +52,40 @@
             "type": "command",
             "command": "node /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/task-sync.js",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/send-event.py Stop",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/subagent-router.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/send-event.py SubagentStart",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/send-event.py SubagentStop",
+            "timeout": 3
           }
         ]
       }

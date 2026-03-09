@@ -1,0 +1,35 @@
+# Maestro 크로스 도구 동기화 설정
+# Claude를 원본(source of truth)으로 삼고 심볼릭 링크로 동기화
+
+source:
+  skills: "~/.claude/skills"
+  commands: "~/.claude/commands"
+
+targets:
+  codex:
+    skills_dir: "~/.codex/skills"
+    commands_dir: "~/.codex/commands"
+    # skills 동기화 시 제외 목록 (Claude 전용 또는 보안 관련)
+    exclude_skills:
+      - "contract-gate*"
+      - "security-scan*"
+      - "task-sync*"
+      - "brand-guidelines*"
+    # commands 동기화 시 제외 목록
+    exclude_commands:
+      - "design*"
+      - "localcode*"
+
+  gemini:
+    skills_dir: "~/.gemini/skills"
+    commands_dir: null   # Gemini는 commands 동기화 없음
+    exclude_skills:
+      - "contract-gate*"
+      - "security-scan*"
+      - "task-sync*"
+      - "tdd*"
+      - "build-fix*"
+
+notes: |
+  Qwen CLI는 OpenAI 호환 API만 사용, 별도 CLI 없으므로 동기화 제외.
+  심볼릭 링크 방식: 원본 수정 시 자동 반영, 삭제 시 링크만 제거.

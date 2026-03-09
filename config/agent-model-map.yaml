@@ -1,0 +1,106 @@
+# Maestro Claude Code - OMC 에이전트별 최적 모델 매핑
+# 계획서: GitHub-프로젝트-적용-계획서.md Phase 5
+#
+# 목적: SubagentStart hook에서 에이전트 이름을 감지하여
+#        최적 모델로 LiteLLM Proxy 라우팅 오버라이드
+#
+# 설계 원칙:
+#   - 코드 작업(executor, code-reviewer) → gpt-5.4-medium (Codex 구독 활용)
+#   - 디자인(designer) → gemini-3.1-pro (멀티모달 강점)
+#   - 장문 분석(analyst, scientist) → qwen3.5-122b (400K ctx, 무료)
+#   - 보안(security-reviewer, security-specialist) → claude-sonnet-4-6 (최고 정밀도)
+#   - 단순 작업(haiku 티어) → qwen3-coder-30b (무료, 경량)
+#   - 나머지 → glm-5 (기본, $3/월 고정)
+
+# ============================================================
+# Opus 티어 에이전트 (복잡 추론)
+# ============================================================
+opus_agents:
+  architect:         "claude-sonnet-4-6"   # 아키텍처 = 최고 추론 필요
+  analyst:           "qwen3.5-122b"        # 요구사항 분석 = 장문 컨텍스트
+  critic:            "claude-sonnet-4-6"   # 코드/계획 리뷰 = 정밀 판단
+  planner:           "glm-5"               # 기획 = GLM-5로 충분
+  deep-executor:     "gpt-5.4-medium"      # 복잡 구현 = Codex 구독
+  scientist-high:    "qwen3.5-122b"        # 고급 데이터 분석 = 장문
+  designer-high:     "gemini-3.1-pro"      # 복잡 UI 아키텍처 = Gemini
+  executor-high:     "gpt-5.4-medium"      # 복잡 멀티파일 = Codex
+  explore-high:      "qwen3.5-122b"        # 심층 탐색 = 장문
+  qa-tester-high:    "gpt-5.4-medium"      # 프로덕션 QA = Codex
+
+# ============================================================
+# Sonnet 티어 에이전트 (표준 작업)
+# ============================================================
+sonnet_agents:
+  code-reviewer:     "gpt-5.4-medium"      # 코드 리뷰 = Codex 정확도
+  designer:          "gemini-3.1-pro"      # UI/UX 디자인 = Gemini 멀티모달
+  executor:          "gpt-5.4-medium"      # 표준 구현 = Codex 구독
+  explore-medium:    "glm-5"               # 중간 탐색 = GLM-5
+  architect-medium:  "glm-5"               # 중간 아키텍처 = GLM-5
+  git-master:        "glm-5"               # Git 작업 = GLM-5 (단순)
+  qa-tester:         "gpt-5.4-medium"      # 테스트 = Codex
+  researcher:        "glm-5"               # 외부 문서 조사 = GLM-5
+  scientist:         "qwen3.5-122b"        # 데이터 분석 = 장문
+  security-reviewer: "claude-sonnet-4-6"   # 보안 = 최고 정밀도 (Claude 구독)
+  vision:            "gemini-3.1-pro"      # 시각/이미지 = Gemini 멀티모달
+  writer:            "glm-5"               # 문서 작성 = GLM-5 (저비용)
+
+# ============================================================
+# Haiku 티어 에이전트 (경량 작업)
+# ============================================================
+haiku_agents:
+  architect-low:      "glm-5"              # 간단 질문/조회
+  build-fixer-low:    "qwen3-coder-30b"    # 빌드 에러 수정 = 경량 코드
+  code-reviewer-low:  "qwen3-coder-30b"    # 빠른 코드 리뷰
+  designer-low:       "glm-5"              # 단순 스타일링
+  executor-low:       "qwen3-coder-30b"    # 단순 단일 파일 코드
+  explore:            "glm-5"              # 빠른 탐색
+  researcher-low:     "glm-5"              # 간단 문서 조회
+  scientist-low:      "glm-5"              # 간단 데이터 통계
+  security-reviewer-low: "glm-5"           # 빠른 보안 체크
+  tdd-guide-low:      "qwen3-coder-30b"    # 간단 테스트 제안
+
+# ============================================================
+# 전문가 에이전트 (도메인 특화)
+# ============================================================
+specialist_agents:
+  backend-specialist:    "gpt-5.4-medium"  # 백엔드 API = Codex
+  frontend-specialist:   "gemini-3.1-pro"  # 프론트엔드 = Gemini
+  database-specialist:   "gpt-5.4-medium"  # DB 스키마 = Codex
+  security-specialist:   "claude-sonnet-4-6" # 보안 감사 = Claude (최우선)
+  test-specialist:       "gpt-5.4-medium"  # 테스트 설계 = Codex
+  docs-specialist:       "glm-5"           # 문서 작성 = GLM-5
+  build-fixer:           "qwen3-coder-30b" # 빌드 수정 = 경량 코드
+  3d-engine-specialist:  "glm-5"           # 3D/Three.js = GLM-5
+
+# ============================================================
+# Ultra-Thin 에이전트 (분석/계획 전용, 경량)
+# ============================================================
+ultra_thin_agents:
+  api-designer:          "glm-5"           # API 계약 설계
+  architecture-analyst:  "glm-5"           # 코드 구조 분석
+  dependency-resolver:   "glm-5"           # 의존성 분석
+  impact-analyzer:       "glm-5"           # 변경 영향도 분석
+  orchestrator:          "glm-5"           # 오케스트레이션 조율
+  requirements-analyst:  "glm-5"           # 요구사항 분석
+  system-designer:       "glm-5"           # 시스템 설계
+  task-executor:         "gpt-5.4-medium"  # 실제 구현 실행 = Codex
+  task-planner:          "glm-5"           # 태스크 분해
+
+# ============================================================
+# 팀 관리 에이전트 (거버넌스)
+# ============================================================
+governance_agents:
+  chief-architect:    "claude-sonnet-4-6"  # 전체 아키텍처 = Claude
+  project-manager:    "glm-5"              # 프로젝트 조율 = GLM-5
+  chief-designer:     "gemini-3.1-pro"     # 디자인 시스템 = Gemini
+  qa-manager:         "gpt-5.4-medium"     # QA 총괄 = Codex
+
+# ============================================================
+# 비용 요약
+# ============================================================
+# glm-5:            $3/월 고정 (대부분의 요청)
+# gpt-5.4-medium:   구독 포함 (코드 작업 ~25%)
+# gemini-3.1-pro:   무료 티어 (디자인/멀티모달 ~5%)
+# qwen3.5-122b:     무료 자체 서버 (장문 ~5%)
+# qwen3-coder-30b:  무료 자체 서버 (경량 코드 ~12%)
+# claude-sonnet-4-6: 구독 포함 (보안/아키텍처 ~3%)

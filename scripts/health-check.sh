@@ -20,7 +20,7 @@ fi
 
 NEXUS_HOST="${NEXUS_HOST:-100.64.189.120}"
 NEXUS_PORT="${NEXUS_PORT:-8080}"
-COGNIT_HOST="${COGNIT_HOST:-100.89.224.48}"
+COGNIT_HOST="${COGNIT_HOST:-100.121.138.74}"
 COGNIT_PORT="${COGNIT_PORT:-8000}"
 
 RED='\033[0;31m'
@@ -85,16 +85,32 @@ if [ "$TARGET" = "all" ] || [ "$TARGET" = "cli" ]; then
     check_cli "codex" "codex"
     check_cli "gemini" "gemini"
     check_cli "claude-glm" "claude-glm"
+    check_cli "litellm" "litellm"
+    echo ""
+fi
+
+# ccproxy (LiteLLM Proxy) 상태 확인
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "proxy" ]; then
+    CCPROXY_PORT="${CCPROXY_PORT:-4000}"
+    echo "[LiteLLM Proxy]"
+    printf "%-12s " "ccproxy:"
+    if lsof -ti:${CCPROXY_PORT} > /dev/null 2>&1; then
+        printf "${GREEN}RUNNING${NC} (port ${CCPROXY_PORT})\n"
+    else
+        printf "${RED}STOPPED${NC} → ./scripts/ccproxy-start.sh start\n"
+    fi
     echo ""
 fi
 
 if [ "$TARGET" = "all" ] || [ "$TARGET" = "nexus" ]; then
     echo "[Self-hosted Servers]"
+    # nexus: Tailscale ping으로 100.124.117.46, API는 100.64.189.120:8080
     check_server "nexus" "$NEXUS_HOST" "$NEXUS_PORT"
 fi
 
 if [ "$TARGET" = "all" ] || [ "$TARGET" = "cognit" ]; then
     [ "$TARGET" = "cognit" ] && echo "[Self-hosted Servers]"
+    # cognit: Tailscale IP 100.121.138.74:8000
     check_server "cognit" "$COGNIT_HOST" "$COGNIT_PORT"
 fi
 

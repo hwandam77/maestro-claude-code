@@ -1,0 +1,12 @@
+{
+  "name": "maestro-observability",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --hot run server.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "^1.3.10"
+  }
+}

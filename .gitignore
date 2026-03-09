@@ -46,3 +46,8 @@ workspace/
 artifacts/runs/
 
 demos/casts/*.cast
+
+
+# Observability runtime
+tools/observability/events.db
+tools/observability/.omc/
