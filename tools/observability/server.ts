@@ -19,8 +19,8 @@ db.exec(readFileSync(SCHEMA_PATH, "utf-8"));
 
 // Prepared statements
 const insertEvent = db.prepare(`
-  INSERT INTO events (event_type, session_id, tool_name, model, rule_matched, token_count, latency_ms, status, error_msg, payload)
-  VALUES ($event_type, $session_id, $tool_name, $model, $rule_matched, $token_count, $latency_ms, $status, $error_msg, $payload)
+  INSERT INTO events (event_type, session_id, tool_name, model, rule_matched, token_count, latency_ms, status, error_msg, payload, input_tokens, output_tokens, cost_usd, agent_name, complexity_score, routing_source)
+  VALUES ($event_type, $session_id, $tool_name, $model, $rule_matched, $token_count, $latency_ms, $status, $error_msg, $payload, $input_tokens, $output_tokens, $cost_usd, $agent_name, $complexity_score, $routing_source)
 `);
 
 const queryStats = db.prepare(`
@@ -56,6 +56,76 @@ const queryRecentEvents = db.prepare(`
 
 const queryTotalCount = db.prepare(`
   SELECT COUNT(*) as total FROM events WHERE created_at >= datetime('now', '-24 hours')
+`);
+
+// 비용 집계 - 24시간, 모델별
+const queryCosts = db.prepare(`
+  SELECT
+    model,
+    COUNT(*) as calls,
+    SUM(input_tokens) as total_input_tokens,
+    SUM(output_tokens) as total_output_tokens,
+    SUM(cost_usd) as total_cost
+  FROM events
+  WHERE created_at >= datetime('now', '-24 hours') AND cost_usd > 0
+  GROUP BY model
+  ORDER BY total_cost DESC
+`);
+
+// 비용 집계 - 24시간, 에이전트별
+const queryAgentCosts = db.prepare(`
+  SELECT
+    agent_name,
+    COUNT(*) as calls,
+    SUM(cost_usd) as total_cost
+  FROM events
+  WHERE created_at >= datetime('now', '-24 hours') AND agent_name != ''
+  GROUP BY agent_name
+  ORDER BY total_cost DESC
+`);
+
+// 라우팅 통계 - 24시간
+const queryRouting = db.prepare(`
+  SELECT
+    routing_source,
+    COUNT(*) as count,
+    AVG(complexity_score) as avg_complexity
+  FROM events
+  WHERE created_at >= datetime('now', '-24 hours') AND routing_source != ''
+  GROUP BY routing_source
+`);
+
+// 월간 비용 집계 - 모델별
+const queryCostsMonthly = db.prepare(`
+  SELECT
+    model,
+    COUNT(*) as calls,
+    SUM(input_tokens) as total_input_tokens,
+    SUM(output_tokens) as total_output_tokens,
+    SUM(cost_usd) as total_cost
+  FROM events
+  WHERE strftime('%Y-%m', created_at) = $month AND cost_usd > 0
+  GROUP BY model
+  ORDER BY total_cost DESC
+`);
+
+// 월간 비용 집계 - 에이전트별
+const queryAgentCostsMonthly = db.prepare(`
+  SELECT
+    agent_name,
+    COUNT(*) as calls,
+    SUM(cost_usd) as total_cost
+  FROM events
+  WHERE strftime('%Y-%m', created_at) = $month AND agent_name != ''
+  GROUP BY agent_name
+  ORDER BY total_cost DESC
+`);
+
+// 월간 활성 일수
+const queryMonthlyDays = db.prepare(`
+  SELECT COUNT(DISTINCT date(created_at)) as days_active
+  FROM events
+  WHERE strftime('%Y-%m', created_at) = $month
 `);
 
 // JSON 응답 헬퍼
@@ -121,6 +191,12 @@ const server = Bun.serve({
           $status: String(body.status ?? "ok"),
           $error_msg: String(body.error_msg ?? ""),
           $payload: String(body.payload ?? ""),
+          $input_tokens: body.input_tokens != null ? Number(body.input_tokens) : 0,
+          $output_tokens: body.output_tokens != null ? Number(body.output_tokens) : 0,
+          $cost_usd: body.cost_usd != null ? Number(body.cost_usd) : 0.0,
+          $agent_name: String(body.agent_name ?? ""),
+          $complexity_score: body.complexity_score != null ? Number(body.complexity_score) : 0,
+          $routing_source: String(body.routing_source ?? ""),
         });
         return jsonResponse({ ok: true });
       } catch (err) {
@@ -146,6 +222,110 @@ const server = Bun.serve({
       const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
       const events = queryRecentEvents.all({ $limit: limit });
       return jsonResponse({ events, count: events.length });
+    }
+
+    // GET /api/costs - 비용 요약 (24시간)
+    if (method === "GET" && path === "/api/costs") {
+      const byModel = queryCosts.all() as Array<{
+        model: string; calls: number;
+        total_input_tokens: number; total_output_tokens: number; total_cost: number;
+      }>;
+      const byAgent = queryAgentCosts.all() as Array<{
+        agent_name: string; calls: number; total_cost: number;
+      }>;
+      const totalCost = byModel.reduce((sum, r) => sum + (r.total_cost ?? 0), 0);
+      return jsonResponse({
+        total_cost: totalCost,
+        by_model: byModel.map(r => ({
+          model: r.model,
+          calls: r.calls,
+          cost: r.total_cost,
+          input_tokens: r.total_input_tokens,
+          output_tokens: r.total_output_tokens,
+        })),
+        by_agent: byAgent.map(r => ({
+          agent: r.agent_name,
+          calls: r.calls,
+          cost: r.total_cost,
+        })),
+        generated_at: new Date().toISOString(),
+      });
+    }
+
+    // GET /api/costs/monthly?month=YYYY-MM - 월간 비용 요약
+    if (method === "GET" && path === "/api/costs/monthly") {
+      const month = url.searchParams.get("month") ??
+        new Date().toISOString().slice(0, 7); // 기본값: 현재 월
+      const byModel = queryCostsMonthly.all({ $month: month }) as Array<{
+        model: string; calls: number;
+        total_input_tokens: number; total_output_tokens: number; total_cost: number;
+      }>;
+      const byAgent = queryAgentCostsMonthly.all({ $month: month }) as Array<{
+        agent_name: string; calls: number; total_cost: number;
+      }>;
+      const daysRow = queryMonthlyDays.get({ $month: month }) as { days_active: number };
+      const totalCost = byModel.reduce((sum, r) => sum + (r.total_cost ?? 0), 0);
+      return jsonResponse({
+        month,
+        total_variable: totalCost,
+        total_fixed: 0,       // 고정 비용(구독료 등)은 외부 입력 필요
+        total_cost: totalCost,
+        by_model: byModel.map(r => ({
+          model: r.model,
+          calls: r.calls,
+          cost: r.total_cost,
+          input_tokens: r.total_input_tokens,
+          output_tokens: r.total_output_tokens,
+        })),
+        by_agent: byAgent.map(r => ({
+          agent: r.agent_name,
+          calls: r.calls,
+          cost: r.total_cost,
+        })),
+        days_active: daysRow?.days_active ?? 0,
+        generated_at: new Date().toISOString(),
+      });
+    }
+
+    // GET /api/routing - 라우팅 통계 (24시간)
+    if (method === "GET" && path === "/api/routing") {
+      const rows = queryRouting.all() as Array<{
+        routing_source: string; count: number; avg_complexity: number | null;
+      }>;
+      const totalRouted = rows.reduce((sum, r) => sum + r.count, 0);
+
+      // complexity_tier 별 집계는 별도 컬럼 없을 경우 avg_complexity로 추정
+      const byComplexity: Array<{ tier: string; count: number; avg_score: number }> = [];
+      // 티어 구간: 0-2 SIMPLE, 3-5 MODERATE, 6-8 COMPLEX, 9+ CRITICAL
+      const tierMap: Record<string, { count: number; scoreSum: number }> = {
+        SIMPLE: { count: 0, scoreSum: 0 },
+        MODERATE: { count: 0, scoreSum: 0 },
+        COMPLEX: { count: 0, scoreSum: 0 },
+        CRITICAL: { count: 0, scoreSum: 0 },
+      };
+      for (const row of rows) {
+        const avg = row.avg_complexity ?? 0;
+        const tier = avg <= 2 ? "SIMPLE" : avg <= 5 ? "MODERATE" : avg <= 8 ? "COMPLEX" : "CRITICAL";
+        tierMap[tier].count += row.count;
+        tierMap[tier].scoreSum += avg * row.count;
+      }
+      for (const [tier, data] of Object.entries(tierMap)) {
+        if (data.count > 0) {
+          byComplexity.push({
+            tier,
+            count: data.count,
+            avg_score: data.count > 0 ? data.scoreSum / data.count : 0,
+          });
+        }
+      }
+
+      return jsonResponse({
+        total_routed: totalRouted,
+        by_source: rows.map(r => ({ source: r.routing_source, count: r.count })),
+        by_complexity: byComplexity,
+        escalations: 0, // 에스컬레이션 카운트는 별도 이벤트 타입으로 추적 필요
+        generated_at: new Date().toISOString(),
+      });
     }
 
     // GET / - 대시보드 HTML
