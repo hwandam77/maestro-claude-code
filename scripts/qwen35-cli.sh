@@ -11,7 +11,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# 심볼릭 링크를 따라 실제 스크립트 경로 해석
+REAL_SCRIPT="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$REAL_SCRIPT")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # .env에서 서버 설정 로드
@@ -19,7 +21,7 @@ if [ -f "${PROJECT_DIR}/.env" ]; then
     set -a; source "${PROJECT_DIR}/.env"; set +a
 fi
 
-NEXUS_HOST="${NEXUS_HOST:-100.64.189.120}"
+NEXUS_HOST="${NEXUS_HOST:-100.124.117.46}"
 NEXUS_PORT="${NEXUS_PORT:-8080}"
 NEXUS_URL="http://${NEXUS_HOST}:${NEXUS_PORT}/v1/chat/completions"
 TIMEOUT="${QWEN35_TIMEOUT:-120}"

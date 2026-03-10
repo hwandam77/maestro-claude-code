@@ -22,6 +22,29 @@ Claude Code 구독을 중심으로, claude-imple-skills의 multi-ai-run이 태�
 | 5 | Qwen3.5-122B (Q3_K_XL) | nexus (자체) | `./scripts/qwen35-cli.sh` | 고급 추론, 장문 컨텍스트 | 400K |
 | 6 | Qwen3-Coder-30B-A3B (AWQ-4bit) | cognit (자체) | `./scripts/qwen-coder-cli.sh` | 코드 생성, 리팩토링 | 20K |
 
+## Qwen 서버 사용 규칙 (CRITICAL)
+
+**`qwen` CLI(Qwen Code)를 절대 사용하지 않는다.** 자체 호스팅 Qwen 서버만 사용한다.
+
+| 용도 | 올바른 명령 | 잘못된 명령 |
+|------|------------|------------|
+| 고급 추론/장문 분석 | `./scripts/qwen35-cli.sh "질문"` | ~~`qwen "질문"`~~ |
+| 경량 코드 생성 | `./scripts/qwen-coder-cli.sh "요청"` | ~~`qwen --model ...`~~ |
+
+```bash
+# Qwen3.5-122B (nexus, 400K context) - 고급 추론, 장문 분석
+echo "분석할 내용" | ./scripts/qwen35-cli.sh
+./scripts/qwen35-cli.sh -s "시스템 프롬프트" "질문"
+
+# Qwen3-Coder-30B (cognit, 20K context) - 코드 생성, 리팩토링
+echo "코드 생성 요청" | ./scripts/qwen-coder-cli.sh
+./scripts/qwen-coder-cli.sh "피보나치 함수 작성"
+```
+
+- 두 스크립트 모두 stdin 또는 인자로 프롬프트를 받아 stdout으로 응답 출력
+- Tailscale VPN 연결 필수 (nexus: 100.124.117.46, cognit: 100.121.138.74)
+- `/localcode` → `qwen-coder-cli.sh`, `/analyze` → `qwen35-cli.sh` 매핑
+
 ## 명령어
 
 ### 환경 설정

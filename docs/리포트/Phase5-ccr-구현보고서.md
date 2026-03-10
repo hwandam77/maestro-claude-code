@@ -162,3 +162,34 @@ echo '{"agent_name": "executor"}' | python3 .claude/hooks/subagent-router.py
 - 매핑 없는 에이전트: 기본 GLM-5 사용 (관찰성 이벤트는 전송)
 - 대시보드 미실행 시: 이벤트 전송 실패 무시 (exit 0 보장)
 - LiteLLM Proxy 미실행 시: 힌트 파일만 기록, 정상 종료
+
+---
+
+## 트러블슈팅: claude-glm 401 Authentication Failed (2026-03-09 이후 발견)
+
+### 증상
+`claude-glm` 실행 시 ZAI API에서 401 Authentication Failed 반환.
+
+### 근본 원인
+`.env`의 `ZAI_API_KEY`가 만료/비활성 키(`bd9a6c6ef3de4387ab184f42e4a38b83.YCIIcqZz8N06nPxY`)로 설정되어 있었음.
+올바른 키는 `GLM_CODING_PLAN_API_KEY`(`2ff9940f...` 형태).
+
+### 추가 원인: ANTHROPIC_API_KEY 충돌
+셸 환경에 Anthropic 구독 키(`sk-ant-...`)가 `ANTHROPIC_API_KEY`로 남아있으면 ZAI API 인증 실패.
+`maestro.sh`의 `run_direct()` 함수에서 `unset ANTHROPIC_API_KEY`로 처리됨.
+
+### 진단 명령
+```bash
+# 현재 ZAI_API_KEY로 직접 인증 테스트
+curl -s https://api.z.ai/api/anthropic/v1/messages \
+  -H "Authorization: Bearer $ZAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{"model":"claude-sonnet-4-6","max_tokens":10,"messages":[{"role":"user","content":"hi"}]}'
+# 200 → 키 정상, 401 → 키 만료/오류
+```
+
+### 해결 절차
+1. ZAI 콘솔에서 현재 활성 API 키 확인
+2. `.env`의 `ZAI_API_KEY` 값을 활성 키로 교체
+3. `maestro.sh`에서 `unset ANTHROPIC_API_KEY` 처리 확인

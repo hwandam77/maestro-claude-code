@@ -13,7 +13,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# 심볼릭 링크를 따라 실제 스크립트 경로 해석
+REAL_SCRIPT="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$REAL_SCRIPT")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # .env에서 서버 설정 로드
@@ -21,7 +23,7 @@ if [ -f "${PROJECT_DIR}/.env" ]; then
     set -a; source "${PROJECT_DIR}/.env"; set +a
 fi
 
-COGNIT_HOST="${COGNIT_HOST:-10.10.0.6}"
+COGNIT_HOST="${COGNIT_HOST:-100.121.138.74}"
 COGNIT_PORT="${COGNIT_PORT:-8000}"
 COGNIT_URL="http://${COGNIT_HOST}:${COGNIT_PORT}/v1/chat/completions"
 TIMEOUT="${QWEN_CODER_TIMEOUT:-120}"

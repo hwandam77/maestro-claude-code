@@ -44,18 +44,18 @@ role_routing:
   # 코드 구현 -> Codex (gpt-5.3-codex)
   backend-specialist: codex
   test-specialist: codex
-  api-designer: codex
-  security-specialist: codex
 
   # 디자인/UI -> Gemini
   frontend-specialist: gemini
   chief-designer: gemini
 
-  # 고급 추론 -> Qwen3.5-122B (nexus, 400K context)
-  # task_type_routing에서 명시적 지정 시 사용
+  # 분석/설계 -> Qwen3.5-122B (nexus, 400K context, 무료)
+  api-designer: qwen35
+  security-specialist: qwen35
+  qa-manager: qwen35
 
-  # 코드 생성 경량 -> Qwen3-Coder-30B (cognit, 20K context)
-  # task_type_routing에서 명시적 지정 시 사용
+  # 코드 생성 경량 -> Qwen3-Coder-30B (cognit, 20K context, 무료)
+  # task_type_routing에서 사용
 
 task_type_routing:
   code_generation: codex
@@ -70,6 +70,8 @@ task_type_routing:
   coordination: claude
   long_context_analysis: qwen35
   quick_code_gen: qwen-coder
+  documentation: qwen35
+  data_analysis: qwen35
 
 defaults:
   model: claude

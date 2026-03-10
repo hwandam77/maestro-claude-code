@@ -719,6 +719,22 @@ grep -A 3 "general_settings" ~/.claude/maestro/config/ccproxy.yaml
 # allow_requests_on_db_fail: true  ← 이 줄이 있어야 함
 ```
 
+### claude-glm 401 Authentication Failed
+
+- **원인**: `.env`의 `ZAI_API_KEY`가 만료/비활성 키일 수 있음
+- **진단**:
+  ```bash
+  curl -s https://api.z.ai/api/anthropic/v1/messages \
+    -H "Authorization: Bearer $ZAI_API_KEY" \
+    -H "Content-Type: application/json" \
+    -H "anthropic-version: 2023-06-01" \
+    -d '{"model":"claude-sonnet-4-6","max_tokens":10,"messages":[{"role":"user","content":"hi"}]}'
+  ```
+- **해결**:
+  1. ZAI 콘솔에서 현재 활성 API 키 확인
+  2. `.env`의 `ZAI_API_KEY` 값 교체 (`GLM_CODING_PLAN_API_KEY` 값 사용)
+  3. 셸에 `ANTHROPIC_API_KEY`(Anthropic 구독 키)가 남아있으면 `maestro.sh`의 `unset ANTHROPIC_API_KEY` 처리 확인
+
 ---
 
 ## 12. 참고 문서
