@@ -284,6 +284,28 @@ def send_routing_event(agent_name: str, model: str, source: str,
         pass  # 대시보드 미실행 시 무시
 
 
+# ─── 라우팅 이벤트 로깅 ───
+
+def log_routing_event(agent_name: str, model: str, source: str, complexity_score: int):
+    """라우팅 이벤트를 JSONL 로그에 기록"""
+    import time as _time
+    log_path = os.path.join(PROJECT_DIR, "logs", "ccproxy", "routing-events.jsonl")
+    try:
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        event = {
+            "ts": _time.time(),
+            "session_id": os.environ.get("MAESTRO_SESSION_ID", ""),
+            "agent": agent_name,
+            "model": model,
+            "source": source,
+            "complexity_score": complexity_score,
+        }
+        with open(log_path, "a") as f:
+            f.write(json.dumps(event) + "\n")
+    except Exception:
+        pass
+
+
 # ─── 메인 ───
 
 def main():
@@ -316,6 +338,9 @@ def main():
     # 관찰성 이벤트 전송
     if agent_name or model:
         send_routing_event(agent_name, model, source, complexity_score)
+
+    # 라우팅 이벤트 JSONL 로그 기록 (session-learner.py가 읽음)
+    log_routing_event(agent_name, model or "glm-5", source, complexity_score)
 
     # hook은 항상 exit 0 (실패해도 Claude Code 동작 방해 안 함)
     sys.exit(0)

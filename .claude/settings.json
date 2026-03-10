@@ -55,6 +55,11 @@
           },
           {
             "type": "command",
+            "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/session-learner.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "python3 /Users/hwandam/workspace/maestro-claude-code/.claude/hooks/send-event.py Stop",
             "timeout": 3
           }
